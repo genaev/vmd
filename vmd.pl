@@ -9,6 +9,8 @@ use VK::App 0.06;
 use File::HomeDir;
 use Getopt::Long;
 use Encode;
+#use utf8;
+#use Text::Iconv;
 
 my $version   = '0.01';
 my $app_name  = 'vmd-'.$version;
@@ -114,7 +116,7 @@ else {
 
 sub check_file_exists {
   my $id = shift;
-  return 1 while (<*$id.mp3>);
+  return 1 if (-e $id);
   return 0;
 }
 
@@ -134,17 +136,17 @@ sub download {
     my $url    = $track->{url};
     my $artist = $track->{artist};
     my $title  = $track->{title};
-    $artist = decode_utf8($artist);
-    $title  = decode_utf8($title);
     $artist = &clean_name($artist, without_punctuation => 1);
     $title  = &clean_name($title, without_punctuation => 1);
     
-    my $mp3_filename = $artist.'-'.$title.'-'.$track->{aid}.'.mp3';
-    if (&check_file_exists($aid) == 1) {
-      print "$i/$n Уже скачан $mp3_filename - ОК\n";
+    my $mp3_name = $artist.'-'.$title.'-'.$aid.'.mp3';
+    my $mp3_filename = $aid.'.mp3';
+    if (&check_file_exists($mp3_filename) == 1) {
+      print "$i/$n Уже скачан $mp3_name - ОК\n";
       next;
     }
-    print "$i/$n Скачиваю $mp3_filename";
+	else{
+    print "$i/$n Скачиваю $mp3_name";
     my $req = HTTP::Request->new(GET => $url);
     my $res = $ua->request($req, $mp3_filename);
     if ($res->is_success) {
@@ -153,6 +155,7 @@ sub download {
     else {
       print " - ", $res->status_line, "\n";
     }
+  }
   }
 }
 
@@ -190,7 +193,8 @@ sub clean_name {
   # Undesired characters in the begin and in the end
   $name =~ s/^[-_;\]}).,\s]+//;
   $name =~ s/[-_;[{(.,\s]+$//;
-
+  
+  decode_utf8($name) ;
   return $name;
 }
 
