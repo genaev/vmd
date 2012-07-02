@@ -5,12 +5,13 @@
 
 use strict;
 use warnings;
-use VK::App 0.06;
+use VK::App 0.08;
 use File::HomeDir;
 use Getopt::Long;
 use Encode;
+use File::Copy;
 
-my $version   = '0.01';
+my $version   = '0.02';
 my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
@@ -48,7 +49,7 @@ my $msg_authorize_fail = "Упс! Что-то пошло не так и авто
 
 my ($help_flag,$version_flag,
     $login,$password,$api_id,
-    $uid,$gid,
+    $uid,$gid,$aid
     );
 
 GetOptions("help"       => \$help_flag,
@@ -58,7 +59,7 @@ GetOptions("help"       => \$help_flag,
            "api_id=i"   => \$api_id,
            "uid=s"      => \$uid,
            "gid=s"      => \$gid,
-#           "pid=s"      => \$pid,
+           "aid=s"      => \$aid,
           );
 
 if ($help_flag) {
@@ -107,14 +108,23 @@ elsif ($gid) {
   my $tracks = $vk->request('audio.get',{gid=>$gid}); # Get a list of tracks by gid
   &download($vk,$tracks);  
 }
+elsif ($aid) {
+  my $vk = &app;
+  my $tracks = $vk->request('audio.getById',{audios=>$aid}); # Get a list of tracks by aid
+  &download($vk,$tracks);  
+}
 else {
   print $msg_help;
   exit 0;
 }
 
 sub check_file_exists {
-  my $id = shift;
-  return 1 while (<*$id.mp3>);
+  my $file_name = shift;
+  my $id = $1 if $file_name =~ /-(\d+)\.mp3$/;
+  while (<*$id.mp3>) {
+    move($_,$file_name) if ($file_name ne $_);
+    return 1;
+  }
   return 0;
 }
 
@@ -134,13 +144,13 @@ sub download {
     my $url    = $track->{url};
     my $artist = $track->{artist};
     my $title  = $track->{title};
-    $artist = decode_utf8($artist);
-    $title  = decode_utf8($title);
+    $artist = encode_utf8($artist);
+    $title  = encode_utf8($title);
     $artist = &clean_name($artist, without_punctuation => 1);
     $title  = &clean_name($title, without_punctuation => 1);
     
     my $mp3_filename = $artist.'-'.$title.'-'.$track->{aid}.'.mp3';
-    if (&check_file_exists($aid) == 1) {
+    if (&check_file_exists($mp3_filename) == 1) {
       print "$i/$n Уже скачан $mp3_filename - ОК\n";
       next;
     }
