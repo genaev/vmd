@@ -14,6 +14,8 @@ my $version   = '0.01';
 my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
+my $subfolder = '';
+
 my $msg_session_gen = "Используйте следующую команду для его генерации:\n".
   "$0 --login <ваш email или номер телефона> --password <ваш пароль> --api_id <ID приложения>\n".
   "Заметьте, $app_name не хранит ваш пароль на жестком диске, используя файл с сессией для авторизации.\n".
@@ -94,6 +96,7 @@ elsif ($uid) {
   my $vk = &app;
   my $user = $vk->request('getProfiles',{uid=>$uid,fields=>'uid'}); # Get user id by name
   if (exists $user->{response}->[0]->{uid}) {
+    $subfolder=$uid;
     my $tracks = $vk->request('audio.get',{uid=>$user->{response}->[0]->{uid}}); # Get a list of tracks by uid
     &download($vk,$tracks);
   }
@@ -104,6 +107,7 @@ elsif ($uid) {
 }
 elsif ($gid) {
   my $vk = &app;
+  $subfolder=$gid;
   my $tracks = $vk->request('audio.get',{gid=>$gid}); # Get a list of tracks by gid
   &download($vk,$tracks);  
 }
@@ -123,7 +127,11 @@ sub download {
   my $tracks = shift;
   
   &check_tracks($tracks);
-  
+  my $music_dir =  File::HomeDir->my_music;
+  $music_dir .= '/vk_music/';
+  mkdir $music_dir,0700 or die "Can't create directory $music_dir for downloaded music" unless(-d $music_dir);
+  $music_dir .= $subfolder.'/';
+  mkdir $music_dir,0700 or die "Can't create directory $music_dir" unless(-d $music_dir);
   my $ua = $vk->ua; # Get LWP::UserAgent object
   $|=1;
   my $i = 0;
@@ -137,23 +145,23 @@ sub download {
     $artist = &clean_name($artist, without_punctuation => 1);
     $title  = &clean_name($title, without_punctuation => 1);
     
-    my $mp3_name = $artist.'-'.$title.'-'.$aid.'.mp3';
-    my $mp3_filename = $aid.'.mp3';
+    my $mp3_name = $artist.'-'.$title;
+    my $mp3_filename = $music_dir.$aid.'.mp3';
     if (&check_file_exists($mp3_filename) == 1) {
       print "$i/$n Уже скачан $mp3_name - ОК\n";
       next;
     }
-	else{
-    print "$i/$n Скачиваю $mp3_name";
-    my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req, $mp3_filename);
-    if ($res->is_success) {
-      print " - ОК\n";
-    }
     else {
-      print " - ", $res->status_line, "\n";
+        print "$i/$n Скачиваю $mp3_name";
+        my $req = HTTP::Request->new(GET => $url);
+        my $res = $ua->request($req, $mp3_filename);
+        if ($res->is_success) {
+          print " - ОК\n";
+        }
+        else {
+          print " - ", $res->status_line, "\n";
+        }
     }
-  }
   }
 }
 
