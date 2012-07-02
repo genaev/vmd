@@ -9,8 +9,6 @@ use VK::App 0.06;
 use File::HomeDir;
 use Getopt::Long;
 use Encode;
-#use utf8;
-#use Text::Iconv;
 
 my $version   = '0.01';
 my $app_name  = 'vmd-'.$version;
