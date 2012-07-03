@@ -15,6 +15,9 @@ my $version   = '0.02';
 my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
+my $windows = 0;
+$windows = 1 if $^O =~ /win/i;
+
 my $msg_session_gen = "Используйте следующую команду для его генерации:\n".
   "$0 --login <ваш email или номер телефона> --password <ваш пароль> --api_id <ID приложения>\n".
   "Заметьте, $app_name не хранит ваш пароль на жестком диске, используя файл с сессией для авторизации.\n".
@@ -150,6 +153,9 @@ sub download {
     $title  = &clean_name($title, without_punctuation => 1);
     
     my $mp3_filename = $artist.'-'.$title.'-'.$track->{aid}.'.mp3';
+    if ($windows) {
+      Encode::from_to($mp3_filename, 'utf-8', 'windows-1251');
+    }
     if (&check_file_exists($mp3_filename) == 1) {
       print "$i/$n Уже скачан $mp3_filename - ОК\n";
       next;
