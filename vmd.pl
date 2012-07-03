@@ -35,7 +35,8 @@ my $msg_help = "Программа $app_name для скачивания муз�
   "  Скачивание музыки из групп:\n".
   "  Если страница группы http://vk.com/teamfly, то надо запустить\n".
   "  $0 --gid teamfly\n".
-  "Загрузка музыки происходит в текущую директорию.\n".
+  "Загрузка музыки происходит в My Music, если таковой нет - просто в домашнюю папку пользователя.\n".
+  "В папке создается каталог vk_music а в ней подпапки с именами пользователей.\n".
   "Синхронизация происходит автоматически, если трек уже скачан, второй раз он скачиваться не будет.\n".
   "\nПосетите домашнюю страницу проекта для получения новых версий и дополнительной информации:\n".
   "$home_page\n";
@@ -132,6 +133,7 @@ sub download {
   mkdir $music_dir,0700 or die "Can't create directory $music_dir for downloaded music" unless(-d $music_dir);
   $music_dir .= $subfolder.'/';
   mkdir $music_dir,0700 or die "Can't create directory $music_dir" unless(-d $music_dir);
+  print "Начинается скачивание в папку $music_dir\n";
   my $ua = $vk->ua; # Get LWP::UserAgent object
   $|=1;
   my $i = 0;
@@ -236,7 +238,7 @@ sub app {
 sub cookie_and_api_id_files {
   my $data_dir =  File::HomeDir->my_data;
   die "Can't get user's data directory" unless $data_dir;
-  $data_dir .= '/'.$app_name;
+  $data_dir .= '/.vmd';
   mkdir $data_dir,0700 or die "Can't create app config directory" unless(-d $data_dir);
 
   my $cookie_file = $data_dir.'/.cookie';
