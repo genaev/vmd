@@ -54,6 +54,7 @@ my ($help_flag,$version_flag,
     $login,$password,$api_id,
     $uid,$gid,$aid
     );
+my $rec = 2;
 
 GetOptions("help"       => \$help_flag,
            "version"    => \$version_flag,
@@ -63,6 +64,7 @@ GetOptions("help"       => \$help_flag,
            "uid=s"      => \$uid,
            "gid=s"      => \$gid,
            "aid=s"      => \$aid,
+           "rec=i"      => \$rec,
           );
 
 if ($help_flag) {
@@ -114,7 +116,42 @@ elsif ($gid) {
 elsif ($aid) {
   my $vk = &app;
   my $tracks = $vk->request('audio.getById',{audios=>$aid}); # Get a list of tracks by aid
-  &download($vk,$tracks);  
+  &download($vk,$tracks);
+}
+elsif ($rec) {
+  my $vk = &app;
+  my $music;
+  my $for_download;
+  my $friends = $vk->request('friends.get',{});
+  push @{$friends->{response}}, $vk->uid; # and I too
+  my $total_f = scalar(@{$friends->{response}});
+  $|=1;
+  print "У меня $total_f друга\n";
+  print "Получение музыки друзей...\n";
+  my $i = 0;
+  my $j = 0;
+  foreach my $fid (@{$friends->{response}}) {
+    $i++;
+    print "$i/$total_f";
+    my $tracks = $vk->request('audio.get',{uid=>$fid});
+    foreach my $track (@{$tracks->{response}}) {
+      $j++;
+      my $aid = $track->{aid};
+      $music->{$aid}->{count} = 0 unless exists $music->{$aid}->{count}; 
+      $music->{$aid}->{count}++;
+      $music->{$aid}->{track} = $track;
+    }
+    print " - OK\n";
+  }
+  print "Всего получено $j треков\n";
+  foreach my $aid (keys %{$music}) {
+    push @{$for_download}, $music->{$aid}->{track} if $music->{$aid}->{count} >= $rec;
+  }
+  print "И найдено ",scalar @{$for_download}," пересечений\n";
+  foreach my $track (@{$for_download}) {
+    my $res->{response} = [$track];
+    &download($vk,$res,'0'.$music->{$track->{aid}}->{count}."-");
+  }
 }
 else {
   print $msg_help;
@@ -134,7 +171,7 @@ sub check_file_exists {
 sub download {
   my $vk     = shift;
   my $tracks = shift;
-  
+  my $prefix = shift; $prefix = "" unless $prefix;
   &check_tracks($tracks);
   
   my $ua = $vk->ua; # Get LWP::UserAgent object
@@ -147,12 +184,12 @@ sub download {
     my $url    = $track->{url};
     my $artist = $track->{artist};
     my $title  = $track->{title};
-    $artist = encode_utf8($artist);
-    $title  = encode_utf8($title);
     $artist = &clean_name($artist, without_punctuation => 1);
     $title  = &clean_name($title, without_punctuation => 1);
+    $artist = encode_utf8($artist);
+    $title  = encode_utf8($title);
     
-    my $mp3_filename = $artist.'-'.$title.'-'.$track->{aid}.'.mp3';
+    my $mp3_filename = $prefix.$artist.'-'.$title.'-'.$track->{aid}.'.mp3';
     if ($windows) {
       Encode::from_to($mp3_filename, 'utf-8', 'windows-1251');
     }
@@ -191,13 +228,13 @@ sub clean_name {
   $name =~ s/[\0-\37<>:"\/\\|?*]+//g;
 
   if ($par{without_punctuation}) {
-  # Clean from spaces and punctuation
-  # Punctuation: !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
-    $name =~ s/[\s[:punct:]]+$//;
-    $name =~ s/^[\s[:punct:]]+//;
-    $name =~ s/[\s[:punct:]]+/_/g;
+    # Clean from spaces and punctuation
+    # Punctuation: !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+    $name =~ s/[\s[:punct:]\p{P}\p{Z}\p{M}\p{S}\p{C}]+$//;
+    $name =~ s/^[\s[:punct:]\p{P}\p{Z}\p{M}\p{S}\p{C}]+//;
+    $name =~ s/[\s[:punct:]\p{P}\p{Z}\p{M}\p{S}\p{C}]+/_/g;
   }
-
+  
   # Truncate name
   if ($par{name_length} < length($name)) {
     $name = substr $name, 0, $par{name_length};
