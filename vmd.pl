@@ -136,12 +136,13 @@ elsif ($rec) {
     my $tracks = $vk->request('audio.get',{uid=>$fid});
     foreach my $track (@{$tracks->{response}}) {
       $j++;
-      my $aid = $track->{aid};
+      my $aid = $track->{artist}.'-'.$track->{title};
       $music->{$aid}->{count} = 0 unless exists $music->{$aid}->{count}; 
       $music->{$aid}->{count}++;
       $music->{$aid}->{track} = $track;
     }
     print " - OK\n";
+    last if $i==1;
   }
   print "Всего получено $j треков\n";
   foreach my $aid (keys %{$music}) {
@@ -149,8 +150,9 @@ elsif ($rec) {
   }
   print "И найдено ",scalar @{$for_download}," пересечений\n";
   foreach my $track (@{$for_download}) {
+    my $aid = $track->{artist}.'-'.$track->{title};
     my $res->{response} = [$track];
-    &download($vk,$res,'0'.$music->{$track->{aid}}->{count}."-");
+    &download($vk,$res,'0'.$music->{$aid}->{count}."-");
   }
 }
 else {
