@@ -16,7 +16,7 @@ my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
 my $windows = 0;
-$windows = 1 if $^O =~ /win/i;
+$windows = 1 if ($^O =~ /win/i && $^O !~ /darwin/i);
 
 my $msg_session_gen = "Используйте следующую команду для его генерации:\n".
   "$0 --login <ваш email или номер телефона> --password <ваш пароль> --api_id <ID приложения>\n".
