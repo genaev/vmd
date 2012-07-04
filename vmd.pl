@@ -11,7 +11,7 @@ use Getopt::Long;
 use Encode;
 use File::Copy;
 
-my $version   = '0.02';
+my $version   = '0.03';
 my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
@@ -39,6 +39,7 @@ my $msg_help = "Программа $app_name для скачивания муз�
   "  $0 --gid teamfly\n".
   "Загрузка музыки происходит в текущую директорию.\n".
   "Синхронизация происходит автоматически, если трек уже скачан, второй раз он скачиваться не будет.\n".
+  "Доступны и другие режимы скачивания музыки!\n".
   "\nПосетите домашнюю страницу проекта для получения новых версий и дополнительной информации:\n".
   "$home_page\n";
 
@@ -52,9 +53,8 @@ my $msg_authorize_fail = "Упс! Что-то пошло не так и авто
 
 my ($help_flag,$version_flag,
     $login,$password,$api_id,
-    $uid,$gid,$aid
+    $uid,$gid,$aid,$rec,
     );
-my $rec = 2;
 
 GetOptions("help"       => \$help_flag,
            "version"    => \$version_flag,
@@ -142,17 +142,20 @@ elsif ($rec) {
       $music->{$aid}->{track} = $track;
     }
     print " - OK\n";
-    last if $i==1;
   }
   print "Всего получено $j треков\n";
   foreach my $aid (keys %{$music}) {
     push @{$for_download}, $music->{$aid}->{track} if $music->{$aid}->{count} >= $rec;
   }
-  print "И найдено ",scalar @{$for_download}," пересечений\n";
-  foreach my $track (@{$for_download}) {
-    my $aid = $track->{artist}.'-'.$track->{title};
-    my $res->{response} = [$track];
-    &download($vk,$res,'0'.$music->{$aid}->{count}."-");
+  my $cross_count = 0;
+  $cross_count = scalar @{$for_download} if $for_download;
+  print "И найдено $cross_count пересечений\n";
+  if ($cross_count) {
+    foreach my $track (@{$for_download}) {
+      my $aid = $track->{artist}.'-'.$track->{title};
+      my $res->{response} = [$track];
+      &download($vk,$res,'0'.$music->{$aid}->{count}."-");
+    }
   }
 }
 else {
