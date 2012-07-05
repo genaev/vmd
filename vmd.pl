@@ -10,6 +10,7 @@ use File::HomeDir;
 use Getopt::Long;
 use Encode;
 use File::Copy;
+use File::stat;
 
 my $version   = '0.03';
 my $app_name  = 'vmd-'.$version;
@@ -169,7 +170,7 @@ else {
 sub check_file_exists {
   my $file_name = shift;
   my $id = $1 if $file_name =~ /-(\d+)\.mp3$/;
-  while (<*$id.mp3>) {
+  foreach (<*$id.mp3>) {
     move($_,$file_name) if ($file_name ne $_);
     return 1;
   }
