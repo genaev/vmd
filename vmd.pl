@@ -10,7 +10,6 @@ use File::HomeDir;
 use Getopt::Long;
 use Encode;
 use File::Copy;
-use File::stat;
 
 my $version   = '0.03';
 my $app_name  = 'vmd-'.$version;
