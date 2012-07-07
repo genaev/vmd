@@ -99,33 +99,23 @@ elsif ($login && $password && $api_id) {
     exit 0;
   }
 }
-elsif ($uid) {
-  my $vk = &app;
-  my $user = $vk->request('getProfiles',{uid=>$uid,fields=>'uid'}); # Get user id by name
-  if (exists $user->{response}->[0]->{uid}) {
-    my $tracks = $vk->request('audio.get',{uid=>$user->{response}->[0]->{uid}}); # Get a list of tracks by uid
-    &download($vk,$tracks);
-  }
-  else {
-    print "Не могу найти пользователя с uid '$uid'\n";
-    exit 1;
-  }
-}
-elsif ($gid) {
-  my $vk = &app;
-  my $tracks = $vk->request('audio.get',{gid=>$gid}); # Get a list of tracks by gid
-  &download($vk,$tracks);  
-}
-elsif ($aid) {
-  my $vk = &app;
-  my $tracks = $vk->request('audio.getById',{audios=>$aid}); # Get a list of tracks by aid
-  &download($vk,$tracks);
-}
 elsif ($rec) {
   my $vk = &app;
   my $music;
   my $for_download;
-  my $friends = $vk->request('friends.get',{});
+  if ($uid) {
+    my $user = $vk->request('getProfiles',{uid=>$uid,fields=>'uid'}); # Get user id by name
+    if (exists $user->{response}->[0]->{uid}) {
+      $uid = $user->{response}->[0]->{uid};
+    }
+    else {
+      $uid = $vk->uid;
+    }
+  }
+  else {
+    $uid = $vk->uid;
+  }
+  my $friends = $vk->request('friends.get',{uid=>$uid});
   push @{$friends->{response}}, $vk->uid; # and I too
   my $total_f = scalar(@{$friends->{response}});
   $|=1;
@@ -160,6 +150,28 @@ elsif ($rec) {
       &download($vk,$res,'0'.$music->{$aid}->{count}."-");
     }
   }
+}
+elsif ($uid) {
+  my $vk = &app;
+  my $user = $vk->request('getProfiles',{uid=>$uid,fields=>'uid'}); # Get user id by name
+  if (exists $user->{response}->[0]->{uid}) {
+    my $tracks = $vk->request('audio.get',{uid=>$user->{response}->[0]->{uid}}); # Get a list of tracks by uid
+    &download($vk,$tracks);
+  }
+  else {
+    print "Не могу найти пользователя с uid '$uid'\n";
+    exit 1;
+  }
+}
+elsif ($gid) {
+  my $vk = &app;
+  my $tracks = $vk->request('audio.get',{gid=>$gid}); # Get a list of tracks by gid
+  &download($vk,$tracks);  
+}
+elsif ($aid) {
+  my $vk = &app;
+  my $tracks = $vk->request('audio.getById',{audios=>$aid}); # Get a list of tracks by aid
+  &download($vk,$tracks);
 }
 else {
   print $msg_help;
@@ -207,7 +219,8 @@ sub download {
     }
     print "$i/$n Скачиваю $mp3_filename";
     my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req, $mp3_filename);
+    my $res = $ua->request($req, 'tmp.mp3 ');
+    move('tmp.mp3',$mp3_filename);
     if ($res->is_success) {
       print " - ОК\n";
     }
