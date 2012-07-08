@@ -219,7 +219,7 @@ sub download {
     }
     print "$i/$n Скачиваю $mp3_filename";
     my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req, 'tmp.mp3 ');
+    my $res = $ua->request($req, 'tmp.mp3');
     move('tmp.mp3',$mp3_filename);
     if ($res->is_success) {
       print " - ОК\n";
