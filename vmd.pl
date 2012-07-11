@@ -18,6 +18,11 @@ my $home_page = 'http://genaev.com/pages/vdm';
 
 my $windows = 0;
 $windows = 1 if ($^O =~ /win/i && $^O !~ /darwin/i);
+  # Инициализация пула воркеров
+  my $pool = Thread::Pool::Simple->new(
+       min => 5, max => 15, load => 5,     # минимум 5 воркеров, если очередь больше 5 - 15
+       do => [\&download_track]            # функция для воркера
+       );
 
 my $msg_session_gen = "Используйте следующую команду для его генерации:\n".
   "$0 --login <ваш email или номер телефона> --password <ваш пароль> --api_id <ID приложения>\n".
@@ -82,6 +87,8 @@ elsif ($version_flag) {
 elsif ($login && $password && $api_id) {
   my ($cookie_file,$api_id_file) = &cookie_and_api_id_files;
   my $vk;  
+  
+
   eval {
     $vk = VK::App->new(
        login       => $login,
@@ -199,11 +206,6 @@ sub download {
   my $i = 0;
   my $n = scalar @{$tracks->{response}}; # number of tracks
 
-  # Инициализация пула воркеров
-  my $pool = Thread::Pool::Simple->new(
-       min => 5, max => 15, load => 5,     # минимум 5 воркеров, если очередь больше 5 - 15
-       do => [\&download_track]            # функция для воркера
-       );
 
   foreach my $track (@{$tracks->{response}}) {
     $i++;
@@ -224,10 +226,8 @@ sub download {
       print "$i/$n Уже скачан $mp3_filename - ОК\n";
       next;
     }
-#	&download_track($url,$mp3_filename,$i,$n,$vk);
 	$pool->add($url,$mp3_filename,$i,$n);
   }
-  $pool->join();
 }
 
 sub temp {
@@ -354,5 +354,6 @@ sub api_id_to_file {
   close F;
 }
 
+  $pool->join();
 __END__
 
