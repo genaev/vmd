@@ -10,6 +10,7 @@ use File::HomeDir;
 use Getopt::Long;
 use Encode;
 use File::Copy;
+use Thread::Pool::Simple;
 
 my $version   = '0.03';
 my $app_name  = 'vmd-'.$version;
@@ -17,6 +18,11 @@ my $home_page = 'http://genaev.com/pages/vdm';
 
 my $windows = 0;
 $windows = 1 if ($^O =~ /win/i && $^O !~ /darwin/i);
+  # Инициализация пула воркеров
+  my $pool = Thread::Pool::Simple->new(
+       min => 5, max => 15, load => 5,     # минимум 5 воркеров, если очередь больше 5 - 15
+       do => [\&download_track]            # функция для воркера
+       );
 
 my $msg_session_gen = "Используйте следующую команду для его генерации:\n".
   "$0 --login <ваш email или номер телефона> --password <ваш пароль> --api_id <ID приложения>\n".
@@ -81,6 +87,8 @@ elsif ($version_flag) {
 elsif ($login && $password && $api_id) {
   my ($cookie_file,$api_id_file) = &cookie_and_api_id_files;
   my $vk;  
+  
+
   eval {
     $vk = VK::App->new(
        login       => $login,
@@ -194,10 +202,11 @@ sub download {
   my $prefix = shift; $prefix = "" unless $prefix;
   &check_tracks($tracks);
   
-  my $ua = $vk->ua; # Get LWP::UserAgent object
   $|=1;
   my $i = 0;
   my $n = scalar @{$tracks->{response}}; # number of tracks
+
+
   foreach my $track (@{$tracks->{response}}) {
     $i++;
     my $aid    = $track->{aid};
@@ -217,17 +226,35 @@ sub download {
       print "$i/$n Уже скачан $mp3_filename - ОК\n";
       next;
     }
-    print "$i/$n Скачиваю $mp3_filename";
+	$pool->add($url,$mp3_filename,$i,$n);
+  }
+}
+
+sub temp {
+	my $test=shift;
+	my $test2=shift;
+	print "$test $test2\n";
+	sleep(1);
+}
+
+sub download_track {
+	my $url=shift;
+	my $filename=shift;
+	my $i=shift;
+	my $n=shift;
+	my $vk=&app;
+	my $ua = $vk->ua; # Get LWP::UserAgent object
+    print "$i/$n Скачиваю $filename ...\n";
     my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req, 'tmp.mp3');
-    move('tmp.mp3',$mp3_filename);
+    my $res = $ua->request($req, $filename.'.tmp');
+    move($filename.'.tmp',$filename);
+	print "$i/$n $filename";
     if ($res->is_success) {
       print " - ОК\n";
     }
     else {
       print " - ", $res->status_line, "\n";
     }
-  }
 }
 
 sub clean_name {
@@ -327,5 +354,6 @@ sub api_id_to_file {
   close F;
 }
 
+  $pool->join();
 __END__
 
