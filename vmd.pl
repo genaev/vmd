@@ -81,7 +81,7 @@ my $pool = Thread::Pool::Simple->new(
   do => [\&download_track],                 # функция для воркера
 );
 
-our $vk; # VK app object
+our $vk; # VK::App object
 
 if ($help_flag) {
   print $msg_help;
