@@ -10,6 +10,8 @@ use File::HomeDir;
 use Getopt::Long;
 use Encode;
 use File::Copy;
+use Thread::Pool::Simple;
+use LWP::UserAgent;
 
 my $version   = '0.03';
 my $app_name  = 'vmd-'.$version;
@@ -56,8 +58,10 @@ my $msg_authorize_fail = "Упс! Что-то пошло не так и авто
 
 my ($help_flag,$version_flag,
     $login,$password,$api_id,
-    $uid,$gid,$aid,$rec,
+    $uid,$gid,$aid,$rec
     );
+    
+my $trh = 2; # кол-во потоков по умолчанию
 
 GetOptions("help"       => \$help_flag,
            "version"    => \$version_flag,
@@ -68,7 +72,16 @@ GetOptions("help"       => \$help_flag,
            "gid=s"      => \$gid,
            "aid=s"      => \$aid,
            "rec=i"      => \$rec,
+           "trh=i"      => \$trh,
           );
+
+# Инициализация пула воркеров
+my $pool = Thread::Pool::Simple->new(
+  min => $trh, max => $trh+2, load => $trh, # минимум 2 воркеров, если очередь больше 2 - 4
+  do => [\&download_track],                 # функция для воркера
+);
+
+our $vk; # VK app object
 
 if ($help_flag) {
   print $msg_help;
@@ -80,7 +93,6 @@ elsif ($version_flag) {
 }
 elsif ($login && $password && $api_id) {
   my ($cookie_file,$api_id_file) = &cookie_and_api_id_files;
-  my $vk;  
   eval {
     $vk = VK::App->new(
        login       => $login,
@@ -100,7 +112,7 @@ elsif ($login && $password && $api_id) {
   }
 }
 elsif ($rec) {
-  my $vk = &app;
+  $vk = &app;
   my $music;
   my $for_download;
   if ($uid) {
@@ -147,16 +159,16 @@ elsif ($rec) {
     foreach my $track (@{$for_download}) {
       my $aid = $track->{artist}.'-'.$track->{title};
       my $res->{response} = [$track];
-      &download($vk,$res,'0'.$music->{$aid}->{count}."-");
+      &download($res,'0'.$music->{$aid}->{count}."-");
     }
   }
 }
 elsif ($uid) {
-  my $vk = &app;
+  $vk = &app;
   my $user = $vk->request('getProfiles',{uid=>$uid,fields=>'uid'}); # Get user id by name
   if (exists $user->{response}->[0]->{uid}) {
     my $tracks = $vk->request('audio.get',{uid=>$user->{response}->[0]->{uid}}); # Get a list of tracks by uid
-    &download($vk,$tracks);
+    &download($tracks);
   }
   else {
     print "Не могу найти пользователя с uid '$uid'\n";
@@ -164,19 +176,21 @@ elsif ($uid) {
   }
 }
 elsif ($gid) {
-  my $vk = &app;
+  $vk = &app;
   my $tracks = $vk->request('audio.get',{gid=>$gid}); # Get a list of tracks by gid
-  &download($vk,$tracks);  
+  &download($tracks);  
 }
 elsif ($aid) {
-  my $vk = &app;
+  $vk = &app;
   my $tracks = $vk->request('audio.getById',{audios=>$aid}); # Get a list of tracks by aid
-  &download($vk,$tracks);
+  &download($tracks);
 }
 else {
   print $msg_help;
   exit 0;
 }
+
+$pool->join();
 
 sub check_file_exists {
   my $file_name = shift;
@@ -189,15 +203,14 @@ sub check_file_exists {
 }
 
 sub download {
-  my $vk     = shift;
   my $tracks = shift;
   my $prefix = shift; $prefix = "" unless $prefix;
   &check_tracks($tracks);
   
-  my $ua = $vk->ua; # Get LWP::UserAgent object
   $|=1;
   my $i = 0;
   my $n = scalar @{$tracks->{response}}; # number of tracks
+
   foreach my $track (@{$tracks->{response}}) {
     $i++;
     my $aid    = $track->{aid};
@@ -217,16 +230,26 @@ sub download {
       print "$i/$n Уже скачан $mp3_filename - ОК\n";
       next;
     }
-    print "$i/$n Скачиваю $mp3_filename";
-    my $req = HTTP::Request->new(GET => $url);
-    my $res = $ua->request($req, 'tmp.mp3');
-    move('tmp.mp3',$mp3_filename);
-    if ($res->is_success) {
-      print " - ОК\n";
-    }
-    else {
-      print " - ", $res->status_line, "\n";
-    }
+   $pool->add($url,$mp3_filename,$i,$n);
+  }
+}
+
+sub download_track {
+  my $url      = shift;
+  my $filename = shift;
+  my $i        = shift;
+  my $n        = shift;
+  my $ua = LWP::UserAgent->new; # Get LWP::UserAgent object
+  print "$i/$n Скачиваю $filename ...\n";
+  my $req = HTTP::Request->new(GET => $url);  
+  my $res = $ua->request($req, $filename.'.tmp');
+  move($filename.'.tmp',$filename);
+  print "$i/$n $filename";
+  if ($res->is_success) {
+    print " - ОК\n";
+  }
+  else {
+    print " - ", $res->status_line, "\n";
   }
 }
 
@@ -328,4 +351,3 @@ sub api_id_to_file {
 }
 
 __END__
-
