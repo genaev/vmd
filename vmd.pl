@@ -13,7 +13,7 @@ use File::Copy;
 use Thread::Pool::Simple;
 use LWP::UserAgent;
 
-my $version   = '0.03';
+my $version   = '0.04';
 my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
@@ -42,6 +42,10 @@ my $msg_help =
   "  Скачивание музыки из групп:\n".
   "  Если страница группы http://vk.com/teamfly, то надо запустить\n".
   "  $0 --gid teamfly\n".
+  "  Скачивание музыки из плей листов и отдельных страниц страниц:\n".
+  "  $0 --page 'http://vk.com/audio?album_id=27680175&id=23962687'\n".
+  "\nВажно!\n".
+  "Под Windows параметры командной строки надо вводить в двойных кавычках!\n".
   "Загрузка музыки происходит в текущую директорию.\n".
   "Синхронизация происходит автоматически, если трек уже скачан, второй раз он скачиваться не будет.\n".
   "Доступны и другие режимы скачивания музыки!\n".
@@ -58,7 +62,7 @@ my $msg_authorize_fail = "Упс! Что-то пошло не так и авто
 
 my ($help_flag,$version_flag,
     $login,$password,$api_id,
-    $uid,$gid,$aid,$rec
+    $uid,$gid,$aid,$rec,$page,
     );
     
 my $trh = 2; # кол-во потоков по умолчанию
@@ -73,6 +77,7 @@ GetOptions("help"       => \$help_flag,
            "aid=s"      => \$aid,
            "rec=i"      => \$rec,
            "trh=i"      => \$trh,
+           "page=s"     => \$page,
           );
 
 # Инициализация пула воркеров
@@ -183,6 +188,18 @@ elsif ($gid) {
 elsif ($aid) {
   $vk = &app;
   my $tracks = $vk->request('audio.getById',{audios=>$aid}); # Get a list of tracks by aid
+  &download($tracks);
+}
+elsif ($page) {
+  $vk = &app;
+  my $ua = $vk->ua;
+  my $res = $ua->get($page);
+  return 0 unless $res->is_success;
+  my $content = $res->decoded_content;
+  my $audios;
+  push @{$audios}, $+ while ($content =~ /id=\"audio([\d_]+)\"/g);
+  return 0 unless @{$audios};
+  my $tracks = $vk->request('audio.getById',{audios=>join(',',@{$audios})});
   &download($tracks);
 }
 else {
