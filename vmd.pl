@@ -197,7 +197,7 @@ elsif ($page) {
   return 0 unless $res->is_success;
   my $content = $res->decoded_content;
   my $audios;
-  push @{$audios}, $+ while ($content =~ /id=\"audio([\d_]+)\"/g);
+  push @{$audios}, $+ while ($content =~ /id=\"audio([\d_-]+)\"/g);
   return 0 unless @{$audios};
   my $tracks = $vk->request('audio.getById',{audios=>join(',',@{$audios})});
   &download($tracks);
