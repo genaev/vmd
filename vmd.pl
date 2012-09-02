@@ -12,6 +12,7 @@ use Encode;
 use File::Copy;
 use Thread::Pool::Simple;
 use LWP::UserAgent;
+use IO::File;
 
 my $version   = '0.04';
 my $app_name  = 'vmd-'.$version;
@@ -44,6 +45,8 @@ my $msg_help =
   "  $0 --gid teamfly\n".
   "  Скачивание музыки из плей листов и отдельных страниц страниц:\n".
   "  $0 --page 'http://vk.com/audio?album_id=27680175&id=23962687'\n".
+  "  Получение ссылок на mp3 файлы и создание плей листов:\n".
+  "  $0 --gid 'dubstep light' --m3u play_list.m3u\n".
   "\nВажно!\n".
   "Под Windows параметры командной строки надо вводить в двойных кавычках!\n".
   "Загрузка музыки происходит в текущую директорию.\n".
@@ -62,9 +65,9 @@ my $msg_authorize_fail = "Упс! Что-то пошло не так и авто
 
 my ($help_flag,$version_flag,
     $login,$password,$api_id,
-    $uid,$gid,$aid,$rec,$page,
+    $uid,$gid,$aid,$rec,$page,$m3u,
     );
-    
+
 my $trh = 2; # кол-во потоков по умолчанию
 
 GetOptions("help"       => \$help_flag,
@@ -78,7 +81,11 @@ GetOptions("help"       => \$help_flag,
            "rec=i"      => \$rec,
            "trh=i"      => \$trh,
            "page=s"     => \$page,
+           "m3u=s"     => \$m3u,
           );
+
+my $m3u_fh = IO::File->new("> $m3u") if $m3u;
+print $m3u_fh "#EXTM3U\n" if $m3u_fh;
 
 # Инициализация пула воркеров
 my $pool = Thread::Pool::Simple->new(
@@ -182,6 +189,10 @@ elsif ($uid) {
 }
 elsif ($gid) {
   $vk = &app;
+  unless ($gid =~ /\d+/) {
+    my $group = $vk->request('groups.search',{q=>$gid,count => 1});
+    $gid = $group->{response}->[1]->{gid} if ($group->{response}->[0]);
+  }
   my $tracks = $vk->request('audio.get',{gid=>$gid}); # Get a list of tracks by gid
   &download($tracks);  
 }
@@ -222,6 +233,7 @@ sub check_file_exists {
 sub download {
   my $tracks = shift;
   my $prefix = shift; $prefix = "" unless $prefix;
+
   &check_tracks($tracks);
   
   $|=1;
@@ -230,24 +242,32 @@ sub download {
 
   foreach my $track (@{$tracks->{response}}) {
     $i++;
-    my $aid    = $track->{aid};
-    my $url    = $track->{url};
-    my $artist = $track->{artist};
-    my $title  = $track->{title};
+    my $aid      = $track->{aid};
+    my $url      = $track->{url};
+    my $artist   = $track->{artist};
+    my $title    = $track->{title};
+    my $duration = $track->{duration};
     $artist = &clean_name($artist, without_punctuation => 1);
     $title  = &clean_name($title, without_punctuation => 1);
     $artist = encode_utf8($artist);
     $title  = encode_utf8($title);
     
-    my $mp3_filename = $prefix.$artist.'-'.$title.'-'.$track->{aid}.'.mp3';
-    if ($windows) {
-      Encode::from_to($mp3_filename, 'utf-8', 'windows-1251');
+    unless ($m3u_fh) {
+      my $mp3_filename = $prefix.$artist.'-'.$title.'-'.$track->{aid}.'.mp3';
+      if ($windows) {
+        Encode::from_to($mp3_filename, 'utf-8', 'windows-1251');
+      }
+      if (&check_file_exists($mp3_filename) == 1) {
+        print "$i/$n Уже скачан $mp3_filename - ОК\n";
+        next;
+      }
+      $pool->add($url,$mp3_filename,$i,$n);
     }
-    if (&check_file_exists($mp3_filename) == 1) {
-      print "$i/$n Уже скачан $mp3_filename - ОК\n";
-      next;
+    else {
+      print $m3u_fh "#EXTINF:$duration,$artist - $title\n";
+      print $m3u_fh "$url\n";
     }
-   $pool->add($url,$mp3_filename,$i,$n);
+   
   }
 }
 
