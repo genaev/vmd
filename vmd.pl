@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use VK::App 0.08;
+use VK::App 0.10;
 use File::HomeDir;
 use Getopt::Long;
 use Encode;
