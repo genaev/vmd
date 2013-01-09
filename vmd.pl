@@ -177,7 +177,7 @@ elsif ($rec) {
 }
 elsif ($uid) {
   $vk = &app;
-  my $user = $vk->request('getProfiles',{uid=>$uid,fields=>'uid'}); # Get user id by name
+  my $user = $vk->request('users.get',{uids=>$uid,fields=>'uid'}); # Get user id by name
   if (exists $user->{response}->[0]->{uid}) {
     my $tracks = $vk->request('audio.get',{uid=>$user->{response}->[0]->{uid}}); # Get a list of tracks by uid
     &download($tracks);
