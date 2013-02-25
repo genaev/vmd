@@ -204,6 +204,7 @@ elsif ($aid) {
 elsif ($page) {
   $vk = &app;
   my $ua = $vk->ua;
+  $ua->agent("Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)");
   my $res = $ua->get($page);
   return 0 unless $res->is_success;
   my $content = $res->decoded_content;
