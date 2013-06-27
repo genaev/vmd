@@ -14,7 +14,7 @@ use Thread::Pool::Simple;
 use LWP::UserAgent;
 use IO::File;
 
-my $version   = '0.04';
+my $version   = '0.05';
 my $app_name  = 'vmd-'.$version;
 my $home_page = 'http://genaev.com/pages/vdm';
 
@@ -83,6 +83,8 @@ GetOptions("help"       => \$help_flag,
            "page=s"     => \$page,
            "m3u=s"     => \$m3u,
           );
+
+$api_id = 2998239 unless $api_id;
 
 my $m3u_fh = IO::File->new("> $m3u") if $m3u;
 print $m3u_fh "#EXTM3U\n" if $m3u_fh;
