@@ -16,7 +16,7 @@ use IO::File;
 
 my $version   = '0.05';
 my $app_name  = 'vmd-'.$version;
-my $home_page = 'http://genaev.com/pages/vdm';
+my $home_page = 'http://genaev.com/vmd';
 
 my $windows = 0;
 $windows = 1 if ($^O =~ /win/i && $^O !~ /darwin/i);
