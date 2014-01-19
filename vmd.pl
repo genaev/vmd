@@ -28,7 +28,7 @@ my $msg_session_gen = "Используйте следующую команду 
 
 my $msg_help = 
   "$app_name Copyright (C) 2012 Миша Генаев\n".
-  "web site: http://genaev.com/pages/vdm\n\n".
+  "web site: http://genaev.com/pages/vmd\n\n".
   "Программа $app_name для скачивания музыки из vk.com\n".
   "Для использования программы надо получить api_id, перейдя по ссылке:\n ".
   "http://vk.com/apps.php?act=add\n".
