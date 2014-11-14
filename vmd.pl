@@ -1,7 +1,7 @@
 #!/usr/bin/perl
  
 # vmd.pl - download tracks from vk.com
-# (c) Genaev Misha 2012 | http://genaev.com/pages/vdm
+# (c) Genaev Misha 2012-2014 | http://genaev.com/vdm
 
 use strict;
 use warnings;
