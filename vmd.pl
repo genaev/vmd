@@ -1,7 +1,7 @@
 #!/usr/bin/perl
  
 # vmd.pl - download tracks from vk.com
-# (c) Genaev Misha 2012-2014 | http://genaev.com/vdm
+# (c) Genaev Misha 2012-2015 | http://genaev.com/vdm
 
 use strict;
 use warnings;
@@ -27,8 +27,8 @@ my $msg_session_gen = "Используйте следующую команду 
   "Эту команду надо выполнить всего один раз!\n";
 
 my $msg_help = 
-  "$app_name Copyright (C) 2012 Миша Генаев\n".
-  "web site: http://genaev.com/pages/vmd\n\n".
+  "$app_name Copyright (C) 2015 Миша Генаев\n".
+  "web site: http://genaev.com/vmd\n\n".
   "Программа $app_name для скачивания музыки из vk.com\n".
   "Для использования программы надо получить api_id, перейдя по ссылке:\n ".
   "http://vk.com/apps.php?act=add\n".
