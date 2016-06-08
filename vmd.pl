@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use VK::App 0.12; # скачайте новую вресию модуля! в старой не поломалась авторизация.
+use VK::App 0.12; # скачайте новую вресию модуля! в старой поломалась авторизация.
 use File::HomeDir;
 use Getopt::Long;
 use Encode;
